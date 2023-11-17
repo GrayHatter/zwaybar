@@ -1,4 +1,5 @@
 const std = @import("std");
+const datetime = @import("datetime.zig");
 
 const Header = struct {
     version: usize = 1,
@@ -30,7 +31,7 @@ const Body = struct {
 var date_buffer: [1024]u8 = undefined;
 fn date() Body {
     return Body{
-        .full_text = std.fmt.bufPrint(&date_buffer, "{}", .{std.time.timestamp()}) catch unreachable,
+        .full_text = std.fmt.bufPrint(&date_buffer, "{}", .{datetime.now()}) catch unreachable,
     };
 }
 
