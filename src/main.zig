@@ -1,5 +1,7 @@
 const std = @import("std");
-const datetime = @import("datetime.zig");
+const DateTime = @import("datetime.zig");
+const Video = @import("video.zig");
+const Battery = @import("battery.zig");
 
 const Header = struct {
     version: usize = 1,
@@ -31,15 +33,33 @@ const Body = struct {
 var date_buffer: [1024]u8 = undefined;
 fn date() Body {
     return Body{
-        .full_text = std.fmt.bufPrint(&date_buffer, "{}", .{datetime.now()}) catch unreachable,
+        .full_text = std.fmt.bufPrint(&date_buffer, "{}", .{DateTime.nowOffset(-28800)}) catch unreachable,
+    };
+}
+
+var bl_buffer: [1024]u8 = undefined;
+fn bl() !Body {
+    return Body{
+        .full_text = std.fmt.bufPrint(&bl_buffer, "{}", .{try Video.Backlight.init()}) catch unreachable,
+    };
+}
+
+var bat_buffer: [1024]u8 = undefined;
+fn battery() !Body {
+    var bat = try Battery.init();
+    //try bat.update(std.time.timestamp());
+    return Body{
+        .full_text = std.fmt.bufPrint(&bat_buffer, "{}", .{bat}) catch unreachable,
     };
 }
 
 fn build(a: std.mem.Allocator) ![]Body {
-    const list = try a.alloc(Body, 1);
+    const list = try a.alloc(Body, 3);
     for (list) |*l|
         l.* = Body{};
-    list[0] = date();
+    list[0] = try bl();
+    list[1] = try battery();
+    list[2] = date();
     return list;
 }
 

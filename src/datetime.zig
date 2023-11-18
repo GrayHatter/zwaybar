@@ -47,6 +47,10 @@ pub fn now() DateTime {
     return fromEpoch(std.time.timestamp()) catch unreachable;
 }
 
+pub fn nowOffset(os: i64) DateTime {
+    return fromEpoch(std.time.timestamp() + os) catch unreachable;
+}
+
 pub fn today() DateTime {
     var self = now();
     const offset = @as(i64, self.hours) * 60 * 60 + @as(i64, self.minutes) * 60 + self.seconds;
