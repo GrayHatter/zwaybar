@@ -11,7 +11,7 @@ const Header = struct {
 };
 
 const Body = struct {
-    full_text: ?[]u8 = null,
+    full_text: ?[]const u8 = null,
     short_text: ?[]u8 = null,
     color: ?[]u8 = null,
     background: ?[]u8 = null,
@@ -30,17 +30,21 @@ const Body = struct {
     markup: ?[]const u8 = null,
 };
 
+fn dateOffset(os: i16) DateTime {
+    return DateTime.nowOffset(@as(isize, os) * 60 * 60);
+}
+
 var date_buffer: [1024]u8 = undefined;
-fn date() Body {
+fn date() anyerror!Body {
     return Body{
-        .full_text = std.fmt.bufPrint(&date_buffer, "{}", .{DateTime.nowOffset(-28800)}) catch unreachable,
+        .full_text = try std.fmt.bufPrint(&date_buffer, "{}", .{dateOffset(-8)}),
     };
 }
 
 var bl_buffer: [1024]u8 = undefined;
 fn bl() !Body {
     return Body{
-        .full_text = std.fmt.bufPrint(&bl_buffer, "{}", .{try Video.Backlight.init()}) catch unreachable,
+        .full_text = try std.fmt.bufPrint(&bl_buffer, "{}", .{try Video.Backlight.init()}),
     };
 }
 
@@ -49,22 +53,19 @@ fn battery() !Body {
     var bat = try Battery.init();
     //try bat.update(std.time.timestamp());
     return Body{
-        .full_text = std.fmt.bufPrint(&bat_buffer, "{}", .{bat}) catch unreachable,
+        .full_text = try std.fmt.bufPrint(&bat_buffer, "{}", .{bat}),
+        .markup = "pango",
     };
 }
 
-fn build(a: std.mem.Allocator) ![]Body {
-    const list = try a.alloc(Body, 3);
-    for (list) |*l|
-        l.* = Body{};
-    list[0] = try bl();
-    list[1] = try battery();
-    list[2] = date();
-    return list;
-}
+const build_error = Body{
+    .full_text = "error building this complication",
+};
 
+const Builder = *const fn () anyerror!Body;
+
+var buffer: [0xffffff]u8 = undefined;
 pub fn main() !void {
-    var buffer: [0xffff]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
     var a = fba.allocator();
     var header = Header{};
@@ -78,9 +79,21 @@ pub fn main() !void {
 
     _ = try bw.write("\n[");
 
+    const builders = [_]Builder{
+        bl,
+        battery,
+        date,
+    };
+    const list = try a.alloc(Body, builders.len);
+    defer a.free(list);
+
     while (true) {
-        var list = try build(a);
-        defer a.free(list);
+        for (list, builders) |*l, func| {
+            l.* = func() catch |err| backup: {
+                std.debug.print("Error {} when attempting to try {}\n", .{ err, func });
+                break :backup build_error;
+            };
+        }
 
         try std.json.stringify(list, opt, stdout);
         _ = try bw.write(",\n");
