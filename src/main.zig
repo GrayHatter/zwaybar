@@ -68,16 +68,19 @@ var buffer: [0xffffff]u8 = undefined;
 pub fn main() !void {
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
     var a = fba.allocator();
-    var header = Header{};
 
-    const opt = .{ .emit_null_optional_fields = false };
+    var stdin = std.io.getStdIn().reader();
+    _ = stdin;
 
     const stdout_file = std.io.getStdOut().writer();
     var bw = std.io.bufferedWriter(stdout_file);
     const stdout = bw.writer();
-    try std.json.stringify(header, opt, stdout);
 
+    var header = Header{};
+    const opt = .{ .emit_null_optional_fields = false };
+    try std.json.stringify(header, opt, stdout);
     _ = try bw.write("\n[");
+    try bw.flush(); // don't forget to flush!
 
     const builders = [_]Builder{
         bl,
@@ -88,6 +91,13 @@ pub fn main() !void {
     defer a.free(list);
 
     while (true) {
+        std.time.sleep(1_000_000_000);
+
+        var some_in: [1024]u8 = undefined;
+        _ = some_in;
+        //const count = try stdin.read(&some_in);
+        //std.debug.print("some in '{s}'\n", .{some_in[0..count]});
+
         for (list, builders) |*l, func| {
             l.* = func() catch |err| backup: {
                 std.debug.print("Error {} when attempting to try {}\n", .{ err, func });
@@ -98,6 +108,5 @@ pub fn main() !void {
         try std.json.stringify(list, opt, stdout);
         _ = try bw.write(",\n");
         try bw.flush(); // don't forget to flush!
-        std.time.sleep(1_000_000_000);
     }
 }
