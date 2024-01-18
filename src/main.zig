@@ -69,8 +69,7 @@ pub fn main() !void {
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
     var a = fba.allocator();
 
-    var stdin = std.io.getStdIn().reader();
-    _ = stdin;
+    var stdin = std.io.getStdIn();
 
     const stdout_file = std.io.getStdOut().writer();
     var bw = std.io.bufferedWriter(stdout_file);
@@ -97,6 +96,24 @@ pub fn main() !void {
         _ = some_in;
         //const count = try stdin.read(&some_in);
         //std.debug.print("some in '{s}'\n", .{some_in[0..count]});
+        const err_mask = std.os.POLL.ERR | std.os.POLL.NVAL | std.os.POLL.HUP;
+        var poll_fd = [_]std.os.pollfd{
+            .{
+                .fd = stdin.handle,
+                .events = std.os.POLL.IN,
+                .revents = undefined,
+            },
+        };
+
+        var buf: [2048]u8 = undefined;
+        const events_len = std.os.poll(&poll_fd, 0) catch unreachable;
+        _ = events_len;
+        if (poll_fd[0].revents & std.os.POLL.IN != 0) {
+            const amt = std.os.read(poll_fd[0].fd, &buf) catch unreachable;
+            std.debug.print("--debug-- {any}\n", .{buf[0..amt]});
+        } else if (poll_fd[0].revents & err_mask != 0) {
+            unreachable;
+        }
 
         for (list, builders) |*l, func| {
             l.* = func() catch |err| backup: {
