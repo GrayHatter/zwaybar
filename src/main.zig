@@ -106,8 +106,7 @@ pub fn main() !void {
         };
 
         var buf: [2048]u8 = undefined;
-        const events_len = std.os.poll(&poll_fd, 0) catch unreachable;
-        _ = events_len;
+        _ = std.os.poll(&poll_fd, 0) catch unreachable;
         if (poll_fd[0].revents & std.os.POLL.IN != 0) {
             const amt = std.os.read(poll_fd[0].fd, &buf) catch unreachable;
             std.debug.print("--debug-- {any}\n", .{buf[0..amt]});
