@@ -70,6 +70,7 @@ pub fn main() !void {
     var a = fba.allocator();
 
     var stdin = std.io.getStdIn();
+    _ = stdin;
 
     const stdout_file = std.io.getStdOut().writer();
     var bw = std.io.bufferedWriter(stdout_file);
@@ -86,40 +87,39 @@ pub fn main() !void {
         battery,
         date,
     };
-    const list = try a.alloc(Body, builders.len);
+    const list = try a.alloc(Body, builders.len + 1);
     defer a.free(list);
+
+    const err_mask = std.os.POLL.ERR | std.os.POLL.NVAL | std.os.POLL.HUP;
+    var buf: [2048]u8 = undefined;
+    var poll_fd = [_]std.os.pollfd{.{
+        .fd = 0,
+        .events = std.os.POLL.IN,
+        .revents = undefined,
+    }};
 
     while (true) {
         std.time.sleep(1_000_000_000);
 
-        var some_in: [1024]u8 = undefined;
-        _ = some_in;
-        //const count = try stdin.read(&some_in);
-        //std.debug.print("some in '{s}'\n", .{some_in[0..count]});
-        const err_mask = std.os.POLL.ERR | std.os.POLL.NVAL | std.os.POLL.HUP;
-        var poll_fd = [_]std.os.pollfd{
-            .{
-                .fd = stdin.handle,
-                .events = std.os.POLL.IN,
-                .revents = undefined,
-            },
-        };
-
-        var buf: [2048]u8 = undefined;
         _ = std.os.poll(&poll_fd, 0) catch unreachable;
+        var amt: usize = 0;
         if (poll_fd[0].revents & std.os.POLL.IN != 0) {
-            const amt = std.os.read(poll_fd[0].fd, &buf) catch unreachable;
+            amt = std.os.read(0, &buf) catch unreachable;
             std.debug.print("--debug-- {any}\n", .{buf[0..amt]});
         } else if (poll_fd[0].revents & err_mask != 0) {
             unreachable;
+        } else {
+            std.debug.print("--debug-- nothing\n", .{});
         }
 
-        for (list, builders) |*l, func| {
+        for (list[0..builders.len], builders) |*l, func| {
             l.* = func() catch |err| backup: {
                 std.debug.print("Error {} when attempting to try {}\n", .{ err, func });
                 break :backup build_error;
             };
         }
+
+        list[builders.len] = Body{ .full_text = buf[0..amt] };
 
         try std.json.stringify(list, opt, stdout);
         _ = try bw.write(",\n");
