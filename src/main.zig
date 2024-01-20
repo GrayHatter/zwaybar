@@ -22,8 +22,10 @@ const Body = struct {
     border_right: ?usize = null,
     min_width: ?[]u8 = null,
     @"align": ?[]u8 = null,
-    name: ?[]u8 = null,
-    instance: ?[]u8 = null,
+    // Did you know... neither name nor instance is optional if you want click
+    // events? Because I didn't know, and I read the man and everything. :<
+    name: []const u8,
+    instance: []const u8,
     urgent: bool = false,
     separator: bool = true,
     separator_block_width: ?usize = null,
@@ -38,6 +40,8 @@ var date_buffer: [1024]u8 = undefined;
 fn date() anyerror!Body {
     return Body{
         .full_text = try std.fmt.bufPrint(&date_buffer, "{}", .{dateOffset(-8)}),
+        .name = "datetime",
+        .instance = "datetime_0",
     };
 }
 
@@ -45,6 +49,8 @@ var bl_buffer: [1024]u8 = undefined;
 fn bl() !Body {
     return Body{
         .full_text = try std.fmt.bufPrint(&bl_buffer, "{}", .{try Video.Backlight.init()}),
+        .name = "backlight",
+        .instance = "backlight_0",
     };
 }
 
@@ -55,11 +61,15 @@ fn battery() !Body {
     return Body{
         .full_text = try std.fmt.bufPrint(&bat_buffer, "{}", .{bat}),
         .markup = "pango",
+        .name = "battery",
+        .instance = "battery_0",
     };
 }
 
 const build_error = Body{
     .full_text = "error building this complication",
+    .name = "ERROR",
+    .instance = "ERROR0",
 };
 
 const Builder = *const fn () anyerror!Body;
@@ -119,7 +129,7 @@ pub fn main() !void {
             };
         }
 
-        list[builders.len] = Body{ .full_text = buf[0..amt] };
+        list[builders.len] = Body{ .full_text = buf[0..amt], .name = "", .instance = "" };
 
         try std.json.stringify(list, opt, stdout);
         _ = try bw.write(",\n");
