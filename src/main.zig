@@ -32,6 +32,19 @@ const Body = struct {
     markup: ?[]const u8 = null,
 };
 
+const Click = struct {
+    name: []u8,
+    instance: []u8,
+    x: isize = 0,
+    y: isize = 0,
+    button: u8,
+    event: usize = undefined,
+    relative_x: isize = 0,
+    relative_y: isize = 0,
+    width: isize = 0,
+    height: isize = 0,
+};
+
 fn dateOffset(os: i16) DateTime {
     return DateTime.nowOffset(@as(isize, os) * 60 * 60);
 }
