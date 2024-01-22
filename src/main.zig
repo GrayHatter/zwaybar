@@ -129,6 +129,14 @@ pub fn main() !void {
         if (poll_fd[0].revents & std.os.POLL.IN != 0) {
             amt = std.os.read(0, &buf) catch unreachable;
             std.debug.print("--debug-- {any}\n", .{buf[0..amt]});
+            _ = std.json.parseFromSlice(Click, a, buf[0..amt], .{}) catch |err| switch (err) {
+                error.UnexpectedEndOfInput => unreachable, // Might be unreachable, but might also be valid.
+                else => {
+                    std.debug.print("JSON parse error ({})\n", .{err});
+                    continue;
+                },
+            };
+            //defer a.free(click);
         } else if (poll_fd[0].revents & err_mask != 0) {
             unreachable;
         } else {
