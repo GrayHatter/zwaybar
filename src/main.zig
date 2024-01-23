@@ -50,7 +50,7 @@ fn dateOffset(os: i16) DateTime {
 }
 
 var date_buffer: [1024]u8 = undefined;
-fn date() anyerror!Body {
+fn date(_: ?Click) anyerror!Body {
     return Body{
         .full_text = try std.fmt.bufPrint(&date_buffer, "{}", .{dateOffset(-8)}),
         .name = "datetime",
@@ -59,7 +59,7 @@ fn date() anyerror!Body {
 }
 
 var bl_buffer: [1024]u8 = undefined;
-fn bl() !Body {
+fn bl(_: ?Click) !Body {
     return Body{
         .full_text = try std.fmt.bufPrint(&bl_buffer, "{}", .{try Video.Backlight.init()}),
         .name = "backlight",
@@ -68,7 +68,7 @@ fn bl() !Body {
 }
 
 var bat_buffer: [1024]u8 = undefined;
-fn battery() !Body {
+fn battery(_: ?Click) !Body {
     var bat = try Battery.init();
     //try bat.update(std.time.timestamp());
     return Body{
@@ -85,7 +85,7 @@ const build_error = Body{
     .instance = "ERROR0",
 };
 
-const Builder = *const fn () anyerror!Body;
+const Builder = *const fn (?Click) anyerror!Body;
 
 var buffer: [0xffffff]u8 = undefined;
 pub fn main() !void {
@@ -124,12 +124,14 @@ pub fn main() !void {
     while (true) {
         std.time.sleep(1_000_000_000);
 
-        _ = std.os.poll(&poll_fd, 0) catch unreachable;
+        _ = std.os.poll(&poll_fd, 1000) catch unreachable;
+        var click: ?Click = null;
+        var parsed: ?std.json.Parsed(Click) = null;
         var amt: usize = 0;
         if (poll_fd[0].revents & std.os.POLL.IN != 0) {
             amt = std.os.read(0, &buf) catch unreachable;
             std.debug.print("--debug-- {any}\n", .{buf[0..amt]});
-            _ = std.json.parseFromSlice(Click, a, buf[0..amt], .{}) catch |err| switch (err) {
+            parsed = std.json.parseFromSlice(Click, a, buf[0..amt], .{}) catch |err| switch (err) {
                 error.UnexpectedEndOfInput => unreachable, // Might be unreachable, but might also be valid.
                 else => {
                     std.debug.print("JSON parse error ({})\n", .{err});
@@ -143,8 +145,12 @@ pub fn main() !void {
             std.debug.print("--debug-- nothing\n", .{});
         }
 
+        if (parsed) |prs| {
+            click = prs.value;
+        }
+
         for (list[0..builders.len], builders) |*l, func| {
-            l.* = func() catch |err| backup: {
+            l.* = func(click) catch |err| backup: {
                 std.debug.print("Error {} when attempting to try {}\n", .{ err, func });
                 break :backup build_error;
             };
