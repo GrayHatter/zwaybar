@@ -1,4 +1,6 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator;
+
 const DateTime = @import("datetime.zig");
 const Video = @import("video.zig");
 const Battery = @import("battery.zig");
@@ -59,7 +61,14 @@ fn date(_: ?Click) anyerror!Body {
 }
 
 var bl_buffer: [1024]u8 = undefined;
-fn bl(_: ?Click) !Body {
+fn bl(click: ?Click) !Body {
+    if (click) |_| {
+        return Body{
+            .full_text = try std.fmt.bufPrint(&bl_buffer, "CLICK {} CLICK", .{try Video.Backlight.init()}),
+            .name = "backlight",
+            .instance = "backlight_0",
+        };
+    }
     return Body{
         .full_text = try std.fmt.bufPrint(&bl_buffer, "{}", .{try Video.Backlight.init()}),
         .name = "backlight",
@@ -86,6 +95,18 @@ const build_error = Body{
 };
 
 const Builder = *const fn (?Click) anyerror!Body;
+
+fn toClick(a: Allocator, str: []const u8) !Click {
+    var parsed = std.json.parseFromSlice(Click, a, str, .{}) catch |err| switch (err) {
+        //error.UnexpectedEndOfInput => unreachable, // Might be unreachable, but might also be valid.
+        else => {
+            std.debug.print("JSON parse error ({})\n", .{err});
+            return error.Unknown;
+        },
+    };
+    defer parsed.deinit();
+    return parsed.value;
+}
 
 var buffer: [0xffffff]u8 = undefined;
 pub fn main() !void {
@@ -124,21 +145,14 @@ pub fn main() !void {
     while (true) {
         std.time.sleep(1_000_000_000);
 
-        _ = std.os.poll(&poll_fd, 1000) catch unreachable;
+        _ = std.os.poll(&poll_fd, 5) catch unreachable;
         var click: ?Click = null;
         var parsed: ?std.json.Parsed(Click) = null;
         var amt: usize = 0;
         if (poll_fd[0].revents & std.os.POLL.IN != 0) {
             amt = std.os.read(0, &buf) catch unreachable;
             std.debug.print("--debug-- {any}\n", .{buf[0..amt]});
-            parsed = std.json.parseFromSlice(Click, a, buf[0..amt], .{}) catch |err| switch (err) {
-                error.UnexpectedEndOfInput => unreachable, // Might be unreachable, but might also be valid.
-                else => {
-                    std.debug.print("JSON parse error ({})\n", .{err});
-                    continue;
-                },
-            };
-            //defer a.free(click);
+            click = toClick(a, buf[0..amt]) catch null;
         } else if (poll_fd[0].revents & err_mask != 0) {
             unreachable;
         } else {
