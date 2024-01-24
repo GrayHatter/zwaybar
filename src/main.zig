@@ -37,14 +37,15 @@ const Body = struct {
 const Click = struct {
     name: []u8,
     instance: []u8,
+    button: u8,
+    event: usize = 0,
     x: isize = 0,
     y: isize = 0,
-    button: u8,
-    event: usize = undefined,
     relative_x: isize = 0,
     relative_y: isize = 0,
     width: isize = 0,
     height: isize = 0,
+    scale: ?isize = 0,
 };
 
 fn dateOffset(os: i16) DateTime {
@@ -108,6 +109,27 @@ fn toClick(a: Allocator, str: []const u8) !Click {
     return parsed.value;
 }
 
+test toClick {
+    var a = std.testing.allocator;
+    //_ = try toClick(a, "{}");
+    _ = try toClick(a,
+        \\
+        \\{
+        \\    "name": "blerg",
+        \\    "instance": "blerg_0",
+        \\    "button": 1,
+        \\    "event": 0,
+        \\    "x": 0,
+        \\    "y": 0,
+        \\    "relative_x": 0,
+        \\    "relative_y": 0,
+        \\    "width": 0,
+        \\    "height": 0
+        \\}
+        \\
+    );
+}
+
 var buffer: [0xffffff]u8 = undefined;
 pub fn main() !void {
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
@@ -131,11 +153,12 @@ pub fn main() !void {
         battery,
         date,
     };
-    const list = try a.alloc(Body, builders.len + 1);
-    defer a.free(list);
+    //var list: [builders.len + 1]Body = undefined;
+    var list: []Body = try a.alloc(Body, builders.len + 1);
 
     const err_mask = std.os.POLL.ERR | std.os.POLL.NVAL | std.os.POLL.HUP;
-    var buf: [2048]u8 = undefined;
+    var buf: [0x4000]u8 = undefined;
+    var str: []const u8 = buf[0..0];
     var poll_fd = [_]std.os.pollfd{.{
         .fd = 0,
         .events = std.os.POLL.IN,
@@ -144,15 +167,27 @@ pub fn main() !void {
 
     while (true) {
         std.time.sleep(1_000_000_000);
+        list.len = builders.len;
 
         _ = std.os.poll(&poll_fd, 5) catch unreachable;
         var click: ?Click = null;
         var parsed: ?std.json.Parsed(Click) = null;
-        var amt: usize = 0;
         if (poll_fd[0].revents & std.os.POLL.IN != 0) {
-            amt = std.os.read(0, &buf) catch unreachable;
+            const amt = std.os.read(0, &buf) catch unreachable;
+            std.debug.assert(amt <= buf.len);
+            const start: usize = if (amt > 1 and buf[0] == ',') 1 else 0;
+            str = buf[start..amt];
+
             std.debug.print("--debug-- {any}\n", .{buf[0..amt]});
-            click = toClick(a, buf[0..amt]) catch null;
+            click = toClick(a, str) catch |err| switch (err) {
+                else => brk: {
+                    const ending = try std.fmt.bufPrint(buf[amt..], " && {}", .{err});
+                    str = &buf;
+                    str.len = amt + ending.len;
+                    list.len = builders.len + 1;
+                    break :brk null;
+                },
+            };
         } else if (poll_fd[0].revents & err_mask != 0) {
             unreachable;
         } else {
@@ -170,7 +205,10 @@ pub fn main() !void {
             };
         }
 
-        list[builders.len] = Body{ .full_text = buf[0..amt], .name = "", .instance = "" };
+        if (list.len > builders.len) {
+            // json error maybe? print debugging
+            list[builders.len] = Body{ .full_text = str, .name = "debug", .instance = "debug" };
+        }
 
         try std.json.stringify(list, opt, stdout);
         _ = try bw.write(",\n");
