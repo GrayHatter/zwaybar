@@ -95,7 +95,19 @@ const build_error = Body{
     .instance = "ERROR0",
 };
 
-const Builder = *const fn (?Click) anyerror!Body;
+fn builder(name: []const u8, build: BldFn, click: ClkFn) anyerror!type {
+    _ = click;
+    _ = build;
+    _ = name;
+}
+
+const Builder = struct {
+    build: BldFn,
+    click: ClkFn,
+};
+
+const BldFn = *const fn (?Click) anyerror!Body;
+const ClkFn = *const fn (?Click) anyerror!Body;
 
 fn toClick(a: Allocator, str: []const u8) !Click {
     var parsed = std.json.parseFromSlice(Click, a, str, .{}) catch |err| switch (err) {
@@ -148,7 +160,7 @@ pub fn main() !void {
     _ = try bw.write("\n[");
     try bw.flush(); // don't forget to flush!
 
-    const builders = [_]Builder{
+    const builders = [_]BldFn{
         bl,
         battery,
         date,
