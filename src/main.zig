@@ -48,6 +48,14 @@ const Click = struct {
     scale: ?isize = 0,
 };
 
+const MouseButton = enum(u8) {
+    left = 1,
+    right = 2,
+    middle = 3,
+    up = 4,
+    down = 5,
+};
+
 fn dateOffset(os: i16) DateTime {
     return DateTime.nowOffset(@as(isize, os) * 60 * 60);
 }
@@ -63,12 +71,20 @@ fn date(_: ?Click) anyerror!Body {
 
 var bl_buffer: [1024]u8 = undefined;
 fn bl(click: ?Click) !Body {
-    if (click) |_| {
-        return Body{
-            .full_text = try std.fmt.bufPrint(&bl_buffer, "CLICK {} CLICK", .{try Video.Backlight.init()}),
-            .name = "backlight",
-            .instance = "backlight_0",
-        };
+    if (click) |clk| {
+        var dir: ?MouseButton = null;
+        if (clk.button == 4 or clk.button == 5) {
+            dir = if (clk.button == 4) .up else .down;
+            return Body{
+                .full_text = try std.fmt.bufPrint(
+                    &bl_buffer,
+                    "CLICK {} CLICK {}",
+                    .{ try Video.Backlight.init(), clk.button },
+                ),
+                .name = "backlight",
+                .instance = "backlight_0",
+            };
+        }
     }
     return Body{
         .full_text = try std.fmt.bufPrint(&bl_buffer, "{}", .{try Video.Backlight.init()}),
