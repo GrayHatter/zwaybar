@@ -4,6 +4,7 @@ const Allocator = std.mem.Allocator;
 const DateTime = @import("datetime.zig");
 const Video = @import("video.zig");
 const Battery = @import("battery.zig");
+const Mouse = @import("mouse.zig");
 
 const Header = struct {
     version: usize = 1,
@@ -48,14 +49,6 @@ const Click = struct {
     scale: ?isize = 0,
 };
 
-const MouseButton = enum(u8) {
-    left = 1,
-    right = 2,
-    middle = 3,
-    up = 4,
-    down = 5,
-};
-
 fn dateOffset(os: i16) DateTime {
     return DateTime.nowOffset(@as(isize, os) * 60 * 60);
 }
@@ -72,7 +65,7 @@ fn date(_: ?Click) anyerror!Body {
 var bl_buffer: [1024]u8 = undefined;
 fn bl(click: ?Click) !Body {
     if (click) |clk| {
-        var dir: ?MouseButton = null;
+        var dir: ?Mouse.Button = null;
         if (clk.button == 4 or clk.button == 5) {
             dir = if (clk.button == 4) .up else .down;
             return Body{
