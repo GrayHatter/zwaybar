@@ -62,28 +62,34 @@ fn date(_: ?Click) anyerror!Body {
     };
 }
 
+var bl_handle: ?Video.Backlight = null;
 var bl_buffer: [1024]u8 = undefined;
 fn bl(click: ?Click) !Body {
-    if (click) |clk| {
-        var dir: ?Mouse.Button = null;
-        if (clk.button == 4 or clk.button == 5) {
-            dir = if (clk.button == 4) .up else .down;
-            return Body{
-                .full_text = try std.fmt.bufPrint(
-                    &bl_buffer,
-                    "CLICK {} CLICK {}",
-                    .{ try Video.Backlight.init(), clk.button },
-                ),
-                .name = "backlight",
-                .instance = "backlight_0",
-            };
+    if (bl_handle) |handle| {
+        if (click) |clk| {
+            var dir: ?Mouse.Button = null;
+            if (clk.button == 4 or clk.button == 5) {
+                dir = if (clk.button == 4) .up else .down;
+                return Body{
+                    .full_text = try std.fmt.bufPrint(
+                        &bl_buffer,
+                        "CLICK {} CLICK {}",
+                        .{ handle, clk.button },
+                    ),
+                    .name = "backlight",
+                    .instance = "backlight_0",
+                };
+            }
         }
+        return Body{
+            .full_text = try std.fmt.bufPrint(&bl_buffer, "{}", .{try Video.Backlight.init()}),
+            .name = "backlight",
+            .instance = "backlight_0",
+        };
+    } else {
+        bl_handle = try Video.Backlight.init();
+        return bl(click);
     }
-    return Body{
-        .full_text = try std.fmt.bufPrint(&bl_buffer, "{}", .{try Video.Backlight.init()}),
-        .name = "backlight",
-        .instance = "backlight_0",
-    };
 }
 
 var bat_buffer: [1024]u8 = undefined;
