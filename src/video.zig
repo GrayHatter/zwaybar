@@ -1,7 +1,8 @@
 const std = @import("std");
+const Click = @import("main.zig").Click;
 
 pub const Backlight = struct {
-    update: i64 = 0,
+    next_update: i64 = 0,
     current: u32 = 0,
     max: u32 = 0,
 
@@ -26,9 +27,27 @@ pub const Backlight = struct {
     }
 
     pub fn update(self: *Backlight, t: i64) !void {
-        if (self.update > t) return;
-        self.update = t + 10;
+        if (self.next_update > t) return;
+        self.next_update = t + 10;
         try self.read(false);
+    }
+
+    pub fn click(self: *Backlight, clk: Click) !void {
+        var goal: [0x20]u8 = undefined;
+        var out: []u8 = undefined;
+        if (clk.button == 4) {
+            self.current = @min(255, @max(self.current + 20, 1));
+            out = try std.fmt.bufPrint(&goal, "{}", .{self.current});
+        } else if (clk.button == 5) {
+            self.current = @min(255, @max(self.current - 20, 1));
+            out = try std.fmt.bufPrint(&goal, "{}", .{self.current});
+        } else return;
+        var file = try std.fs.openFileAbsolute(
+            "/sys/class/backlight/amdgpu_bl1/brightness",
+            .{ .mode = .read_write },
+        );
+        defer file.close();
+        try file.writeAll(out);
     }
 
     pub fn format(self: Backlight, comptime _: []const u8, _: std.fmt.FormatOptions, out: anytype) !void {

@@ -35,7 +35,7 @@ const Body = struct {
     markup: ?[]const u8 = null,
 };
 
-const Click = struct {
+pub const Click = struct {
     name: []u8,
     instance: []u8,
     button: u8,
@@ -65,9 +65,10 @@ fn date(_: ?Click) anyerror!Body {
 var bl_handle: ?Video.Backlight = null;
 var bl_buffer: [1024]u8 = undefined;
 fn bl(click: ?Click) !Body {
-    if (bl_handle) |handle| {
+    if (bl_handle) |*handle| {
         if (click) |clk| {
             var dir: ?Mouse.Button = null;
+            try handle.click(clk);
             if (clk.button == 4 or clk.button == 5) {
                 dir = if (clk.button == 4) .up else .down;
                 return Body{
@@ -81,8 +82,9 @@ fn bl(click: ?Click) !Body {
                 };
             }
         }
+        try handle.update(std.time.timestamp());
         return Body{
-            .full_text = try std.fmt.bufPrint(&bl_buffer, "{}", .{try Video.Backlight.init()}),
+            .full_text = try std.fmt.bufPrint(&bl_buffer, "{}", .{handle}),
             .name = "backlight",
             .instance = "backlight_0",
         };
