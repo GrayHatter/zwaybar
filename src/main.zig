@@ -198,7 +198,11 @@ pub fn main() !void {
         std.time.sleep(1_000_000_000);
         list.len = builders.len;
 
-        _ = std.os.poll(&poll_fd, 5) catch unreachable;
+        for (0..500) |_| {
+            if (std.os.poll(&poll_fd, 1) catch unreachable > 0) {
+                break;
+            }
+        }
         var click: ?Click = null;
         var parsed: ?std.json.Parsed(Click) = null;
         if (poll_fd[0].revents & std.os.POLL.IN != 0) {
