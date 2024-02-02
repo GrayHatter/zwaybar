@@ -186,7 +186,7 @@ pub fn main() !void {
     var list: []Body = try a.alloc(Body, builders.len + 1);
 
     const err_mask = std.os.POLL.ERR | std.os.POLL.NVAL | std.os.POLL.HUP;
-    var buf: [0x4000]u8 = undefined;
+    var buf: [0x5000]u8 = undefined;
     var str: []const u8 = buf[0..0];
     var poll_fd = [_]std.os.pollfd{.{
         .fd = 0,
@@ -210,6 +210,9 @@ pub fn main() !void {
             std.debug.assert(amt <= buf.len);
             const start: usize = if (amt > 1 and buf[0] == ',') 1 else 0;
             str = buf[start..amt];
+            if (std.mem.indexOf(u8, str, "\n")) |i| {
+                str = buf[start .. i + 1];
+            }
 
             std.debug.print("--debug-- {any}\n", .{buf[0..amt]});
             click = toClick(a, str) catch |err| switch (err) {
