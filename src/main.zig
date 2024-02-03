@@ -195,13 +195,16 @@ pub fn main() !void {
     }};
 
     while (true) {
-        std.time.sleep(1_000_000_000);
+        var miss: usize = 1;
         list.len = builders.len;
 
-        for (0..500) |_| {
-            if (std.os.poll(&poll_fd, 1) catch unreachable > 0) {
+        for (0..100) |_| {
+            if (std.os.poll(&poll_fd, 10) catch unreachable > 0) {
+                miss = 0;
                 break;
             }
+        } else {
+            miss = @min(20, miss +| 1);
         }
         var click: ?Click = null;
         var parsed: ?std.json.Parsed(Click) = null;
