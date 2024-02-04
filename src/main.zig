@@ -13,7 +13,7 @@ const Header = struct {
     stop_signal: usize = 19,
 };
 
-const Body = struct {
+pub const Body = struct {
     full_text: ?[]const u8 = null,
     short_text: ?[]u8 = null,
     color: ?[]u8 = null,
@@ -83,11 +83,7 @@ fn bl(click: ?Click) !Body {
             }
         }
         try handle.update(std.time.timestamp());
-        return Body{
-            .full_text = try std.fmt.bufPrint(&bl_buffer, "{}", .{handle}),
-            .name = "backlight",
-            .instance = "backlight_0",
-        };
+        return handle.json();
     } else {
         bl_handle = try Video.Backlight.init();
         return bl(click);

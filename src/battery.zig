@@ -7,6 +7,7 @@ const Battery = @This();
 
 update: i64 = 0,
 capacity: u8 = 0,
+name: []const u8 = "battery",
 
 pub fn init() !Battery {
     var bat = Battery{};

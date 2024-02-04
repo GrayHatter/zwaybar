@@ -1,7 +1,11 @@
 const std = @import("std");
-const Click = @import("main.zig").Click;
+const Main = @import("main.zig");
+const Click = Main.Click;
+const Body = Main.Body;
 
 pub const Backlight = struct {
+    name: []const u8 = "backlight",
+    instance: []const u8 = "backlight_0",
     next_update: i64 = 0,
     current: u32 = 0,
     max: u32 = 0,
@@ -30,6 +34,15 @@ pub const Backlight = struct {
         if (self.next_update > t) return;
         self.next_update = t + 10;
         try self.read(false);
+    }
+
+    var bl_buffer: [1024]u8 = undefined;
+    pub fn json(self: Backlight) !Body {
+        return Body{
+            .full_text = try std.fmt.bufPrint(&bl_buffer, "{}", .{self}),
+            .name = "backlight",
+            .instance = "backlight_0",
+        };
     }
 
     pub fn click(self: *Backlight, clk: Click) !void {
