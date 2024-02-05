@@ -45,22 +45,24 @@ pub const Backlight = struct {
         };
     }
 
-    pub fn click(self: *Backlight, clk: Click) !void {
+    pub fn change(self: *Backlight, delta: isize) !void {
         var goal: [0x20]u8 = undefined;
-        var out: []u8 = undefined;
-        if (clk.button == 4) {
-            self.current = @min(255, @max(self.current +| 4, 1));
-            out = try std.fmt.bufPrint(&goal, "{}", .{self.current});
-        } else if (clk.button == 5) {
-            self.current = @min(255, @max(self.current -| 4, 1));
-            out = try std.fmt.bufPrint(&goal, "{}", .{self.current});
-        } else return;
+        self.current = @min(self.max, @max(self.current +| delta, 1));
+        const out = try std.fmt.bufPrint(&goal, "{}", .{self.current});
         var file = try std.fs.openFileAbsolute(
             "/sys/class/backlight/amdgpu_bl1/brightness",
             .{ .mode = .read_write },
         );
         defer file.close();
         try file.writeAll(out);
+    }
+
+    pub fn click(self: *Backlight, clk: Click) !void {
+        if (clk.button == 4) {
+            try self.change(4);
+        } else if (clk.button == 5) {
+            try self.change(-4);
+        } else return;
     }
 
     pub fn format(self: Backlight, comptime _: []const u8, _: std.fmt.FormatOptions, out: anytype) !void {
