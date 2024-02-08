@@ -30,10 +30,19 @@ pub fn update(self: *Battery, i: i64) !void {
     try self.read();
 }
 
+pub fn ttl(self: Battery) ![]u8 {
+    const ttlbuf = struct {
+        var buf: [12]u8 = undefined;
+    };
+    const time: usize = 4 * self.capacity / 100;
+    return try std.fmt.bufPrint(&ttlbuf.buf, "{}h00m", .{time});
+}
+
 pub fn format(self: Battery, comptime fmt: []const u8, _: std.fmt.FormatOptions, out: anytype) !void {
-    if (std.mem.eql(u8, fmt, "pango")) {
+    if (std.mem.eql(u8, fmt, "text")) {
         if (self.capacity == 69) return out.print("Battery NICE!", .{});
-        return out.print("Battery {}%", .{self.capacity});
+        const time: []u8 = try self.ttl();
+        return out.print("Battery {}% {s}", .{ self.capacity, time });
     }
     const color: ?Pango.Color = if (self.capacity < 20) Pango.Color.Red else null;
     var p = Pango.Pango(Battery).init(self, color);

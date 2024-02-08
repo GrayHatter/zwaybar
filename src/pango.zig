@@ -52,8 +52,8 @@ pub fn Pango(comptime other: type) type {
         }
 
         pub fn format(self: Self, comptime _: []const u8, _: std.fmt.FormatOptions, out: anytype) !void {
-            if (self.color == null) return try out.print("{pango}", .{self.other});
-            return try out.print("<span color=\"{}\">{pango}</span>", .{ self.color.?, self.other });
+            if (self.color == null) return try out.print("{text}", .{self.other});
+            return try out.print("<span color=\"{}\">{text}</span>", .{ self.color.?, self.other });
         }
     };
 }
