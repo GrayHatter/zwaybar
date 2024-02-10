@@ -72,11 +72,7 @@ fn bl(click: ?Click) !Body {
             if (clk.button == 4 or clk.button == 5) {
                 dir = if (clk.button == 4) .up else .down;
                 return Body{
-                    .full_text = try std.fmt.bufPrint(
-                        &bl_buffer,
-                        "CLICK {} CLICK {}",
-                        .{ handle, clk.button },
-                    ),
+                    .full_text = try std.fmt.bufPrint(&bl_buffer, "{}", .{handle}),
                     .name = "backlight",
                     .instance = "backlight_0",
                 };
