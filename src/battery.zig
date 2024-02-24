@@ -34,8 +34,8 @@ pub fn ttl(self: Battery) ![]u8 {
     const ttlbuf = struct {
         var buf: [12]u8 = undefined;
     };
-    const time: usize = 4 *| @as(usize, @intCast(self.capacity)) / 100;
-    return try std.fmt.bufPrint(&ttlbuf.buf, "{}h00m", .{time});
+    const time: usize = 240 *| @as(usize, @intCast(self.capacity)) / 100;
+    return try std.fmt.bufPrint(&ttlbuf.buf, "{}h{}m", .{ time / 60, time % 60 });
 }
 
 pub fn format(self: Battery, comptime fmt: []const u8, _: std.fmt.FormatOptions, out: anytype) !void {
