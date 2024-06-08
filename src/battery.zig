@@ -19,7 +19,7 @@ fn read(self: *Battery) !void {
     var file = try std.fs.openFileAbsolute("/sys/class/power_supply/BAT1/capacity", .{});
     defer file.close();
     var buffer: [10]u8 = undefined;
-    var count = try file.read(&buffer);
+    const count = try file.read(&buffer);
     self.capacity = try std.fmt.parseInt(u8, buffer[0 .. count - 1], 10);
 }
 
@@ -45,6 +45,6 @@ pub fn format(self: Battery, comptime fmt: []const u8, _: std.fmt.FormatOptions,
         return out.print("Battery {}% {s}", .{ self.capacity, time });
     }
     const color: ?Pango.Color = if (self.capacity < 20) Pango.Color.Red else null;
-    var p = Pango.Pango(Battery).init(self, color);
+    const p = Pango.Pango(Battery).init(self, color);
     return out.print("{}", .{p});
 }

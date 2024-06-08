@@ -56,7 +56,7 @@ fn dateOffset(os: i16) DateTime {
 var date_buffer: [1024]u8 = undefined;
 fn date(_: ?Click) anyerror!Body {
     return Body{
-        .full_text = try std.fmt.bufPrint(&date_buffer, "{}", .{dateOffset(-8)}),
+        .full_text = try std.fmt.bufPrint(&date_buffer, "{}", .{dateOffset(-7)}),
         .name = "datetime",
         .instance = "datetime_0",
     };
@@ -88,7 +88,7 @@ fn bl(click: ?Click) !Body {
 
 var bat_buffer: [1024]u8 = undefined;
 fn battery(_: ?Click) !Body {
-    var bat = try Battery.init();
+    const bat = try Battery.init();
     //try bat.update(std.time.timestamp());
     return Body{
         .full_text = try std.fmt.bufPrint(&bat_buffer, "{}", .{bat}),
@@ -131,7 +131,7 @@ fn toClick(a: Allocator, str: []const u8) !Click {
 }
 
 test toClick {
-    var a = std.testing.allocator;
+    const a = std.testing.allocator;
     //_ = try toClick(a, "{}");
     _ = try toClick(a,
         \\
@@ -156,14 +156,14 @@ pub fn main() !void {
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
     var a = fba.allocator();
 
-    var stdin = std.io.getStdIn();
+    const stdin = std.io.getStdIn();
     _ = stdin;
 
     const stdout_file = std.io.getStdOut().writer();
     var bw = std.io.bufferedWriter(stdout_file);
     const stdout = bw.writer();
 
-    var header = Header{};
+    const header = Header{};
     const opt = .{ .emit_null_optional_fields = false };
     try std.json.stringify(header, opt, stdout);
     _ = try bw.write("\n[");
@@ -177,12 +177,12 @@ pub fn main() !void {
     //var list: [builders.len + 1]Body = undefined;
     var list: []Body = try a.alloc(Body, builders.len + 1);
 
-    const err_mask = std.os.POLL.ERR | std.os.POLL.NVAL | std.os.POLL.HUP;
+    const err_mask = std.posix.POLL.ERR | std.posix.POLL.NVAL | std.posix.POLL.HUP;
     var buf: [0x5000]u8 = undefined;
     var str: []const u8 = buf[0..0];
-    var poll_fd = [_]std.os.pollfd{.{
+    var poll_fd = [_]std.posix.pollfd{.{
         .fd = 0,
-        .events = std.os.POLL.IN,
+        .events = std.posix.POLL.IN,
         .revents = undefined,
     }};
 
@@ -191,7 +191,7 @@ pub fn main() !void {
         list.len = builders.len;
 
         for (0..100) |_| {
-            if (std.os.poll(&poll_fd, 10) catch unreachable > 0) {
+            if (std.posix.poll(&poll_fd, 10) catch unreachable > 0) {
                 miss = 0;
                 break;
             }
@@ -199,9 +199,9 @@ pub fn main() !void {
             miss = @min(20, miss +| 1);
         }
         var click: ?Click = null;
-        var parsed: ?std.json.Parsed(Click) = null;
-        if (poll_fd[0].revents & std.os.POLL.IN != 0) {
-            const amt = std.os.read(0, &buf) catch unreachable;
+        const parsed: ?std.json.Parsed(Click) = null;
+        if (poll_fd[0].revents & std.posix.POLL.IN != 0) {
+            const amt = std.posix.read(0, &buf) catch unreachable;
             std.debug.assert(amt <= buf.len);
             const start: usize = if (amt > 1 and buf[0] == ',') 1 else 0;
             str = buf[start..amt];
