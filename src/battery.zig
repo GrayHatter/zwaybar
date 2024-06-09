@@ -1,5 +1,6 @@
 const std = @import("std");
 const Pango = @import("pango.zig");
+const toBytes = std.mem.toBytes;
 
 const DELAY = 10;
 
@@ -38,11 +39,36 @@ pub fn ttl(self: Battery) ![]u8 {
     return try std.fmt.bufPrint(&ttlbuf.buf, "{}h{}m", .{ time / 60, time % 60 });
 }
 
+pub fn gfx(self: Battery, buffer: *[30]u8) void {
+    var count = self.capacity / 5;
+    var index: usize = 0;
+    for (buffer) |*b| b.* = ' ';
+    while (count > 0) : (count -= 1) {
+        if (count & 2 == 0) {
+            buffer[index..][0..3].* = "⡇".*;
+        } else {
+            buffer[index..][0..3].* = "⣿".*;
+            index += 3;
+        }
+    }
+}
+
+test gfx {
+    var buffer: [30]u8 = undefined;
+    const zero = Battery{ .capacity = 0 };
+    const five = Battery{ .capacity = 5 };
+
+    zero.gfx(&buffer);
+    five.gfx(&buffer);
+}
+
 pub fn format(self: Battery, comptime fmt: []const u8, _: std.fmt.FormatOptions, out: anytype) !void {
     if (std.mem.eql(u8, fmt, "text")) {
         if (self.capacity == 69) return out.print("Battery NICE!", .{});
         const time: []u8 = try self.ttl();
-        return out.print("Battery {}% [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] {s}", .{ self.capacity, time });
+        var buffer: [30]u8 = [_]u8{' '} ** 30;
+        self.gfx(&buffer);
+        return out.print("Battery {}% [{s}] {s}", .{ self.capacity, buffer, time });
     }
     const color: ?Pango.Color = if (self.capacity < 20) Pango.Color.Red else null;
     const p = Pango.Pango(Battery).init(self, color);
