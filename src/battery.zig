@@ -42,7 +42,7 @@ pub fn format(self: Battery, comptime fmt: []const u8, _: std.fmt.FormatOptions,
     if (std.mem.eql(u8, fmt, "text")) {
         if (self.capacity == 69) return out.print("Battery NICE!", .{});
         const time: []u8 = try self.ttl();
-        return out.print("Battery {}% {s}", .{ self.capacity, time });
+        return out.print("Battery {}% [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] {s}", .{ self.capacity, time });
     }
     const color: ?Pango.Color = if (self.capacity < 20) Pango.Color.Red else null;
     const p = Pango.Pango(Battery).init(self, color);
