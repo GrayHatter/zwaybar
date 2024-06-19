@@ -73,15 +73,16 @@ test gfx {
 }
 
 pub fn format(self: Battery, comptime fmt: []const u8, _: std.fmt.FormatOptions, out: anytype) !void {
-    try out.print("Battery ", .{});
     if (std.mem.eql(u8, fmt, "text")) {
+        try out.print("Battery ", .{});
         if (self.capacity == 69) return out.print("NICE!", .{});
         const time: []u8 = try self.ttl();
         var buffer: [30]u8 = [_]u8{' '} ** 30;
         _ = self.gfx(&buffer);
         return out.print("{}% [{s}] {s}", .{ self.capacity, buffer, time });
+    } else {
+        const color: ?Pango.Color = if (self.capacity < 20) Pango.Color.Red else null;
+        const p = Pango.Pango(Battery).init(self, color);
+        return out.print("{}", .{p});
     }
-    const color: ?Pango.Color = if (self.capacity < 20) Pango.Color.Red else null;
-    const p = Pango.Pango(Battery).init(self, color);
-    return out.print("{}", .{p});
 }
