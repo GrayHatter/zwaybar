@@ -53,10 +53,17 @@ fn dateOffset(os: i16) DateTime {
     return DateTime.nowOffset(@as(isize, os) * 60 * 60);
 }
 
+const CONFIG_OFFSET: i16 = -7;
+
+fn localOffset() DateTime {
+    // TODO read from config or system, lol!
+    return dateOffset(CONFIG_OFFSET);
+}
+
 var date_buffer: [1024]u8 = undefined;
 fn date(_: ?Click) anyerror!Body {
     return Body{
-        .full_text = try std.fmt.bufPrint(&date_buffer, "{}", .{dateOffset(-7)}),
+        .full_text = try std.fmt.bufPrint(&date_buffer, "{}", .{localOffset()}),
         .name = "datetime",
         .instance = "datetime_0",
     };
