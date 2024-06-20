@@ -63,10 +63,14 @@ fn localOffset() DateTime {
 var date_buffer: [1024]u8 = undefined;
 fn date(_: ?Click) anyerror!Body {
     return Body{
-        .full_text = try std.fmt.bufPrint(&date_buffer, "{}", .{localOffset()}),
+        .full_text = try printFull(&date_buffer, localOffset()),
         .name = "datetime",
         .instance = "datetime_0",
     };
+}
+
+fn printFull(buf: []u8, handle: anytype) ![]const u8 {
+    return try std.fmt.bufPrint(buf, "{pango}", .{handle});
 }
 
 var bl_handle: ?Video.Backlight = null;
@@ -79,7 +83,7 @@ fn bl(click: ?Click) !Body {
             if (clk.button == 4 or clk.button == 5) {
                 dir = if (clk.button == 4) .up else .down;
                 return Body{
-                    .full_text = try std.fmt.bufPrint(&bl_buffer, "{}", .{handle}),
+                    .full_text = try printFull(&bl_buffer, handle),
                     .name = "backlight",
                     .instance = "backlight_0",
                 };
@@ -98,7 +102,7 @@ fn battery(_: ?Click) !Body {
     const bat = try Battery.init();
     //try bat.update(std.time.timestamp());
     return Body{
-        .full_text = try std.fmt.bufPrint(&bat_buffer, "{}", .{bat}),
+        .full_text = try printFull(&bat_buffer, bat),
         .markup = "pango",
         .name = "battery",
         .instance = "battery_0",
