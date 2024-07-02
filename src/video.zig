@@ -67,6 +67,6 @@ pub const Backlight = struct {
 
     pub fn format(self: Backlight, comptime _: []const u8, _: std.fmt.FormatOptions, out: anytype) !void {
         const pct = self.current * 100 / self.max;
-        return out.print("BL {}%", .{pct});
+        return out.print("Light {}%", .{pct});
     }
 };
