@@ -59,9 +59,9 @@ pub const Backlight = struct {
 
     pub fn click(self: *Backlight, clk: Click) !void {
         if (clk.button == 4) {
-            try self.change(4);
+            try self.change(if (self.current < 16) 1 else 4);
         } else if (clk.button == 5) {
-            try self.change(-4);
+            try self.change(if (self.current < 16) -1 else -4);
         } else return;
     }
 
