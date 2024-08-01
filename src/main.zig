@@ -109,6 +109,16 @@ fn battery(_: ?Click) !Body {
     };
 }
 
+var ipa_buffer: [1024]u8 = undefined;
+fn ipAddr(_: ?Click) !Body {
+    return Body{
+        .full_text = try printFull(&ipa_buffer, null),
+        .markup = "pango",
+        .name = "ipaddr",
+        .instance = "ipaddr_0",
+    };
+}
+
 const build_error = Body{
     .full_text = "error building this complication",
     .name = "ERROR",
