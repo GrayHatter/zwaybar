@@ -72,10 +72,18 @@ test gfx {
     five.gfx(&buffer);
 }
 
+fn color(self: Battery) ?Pango.Color {
+    return switch (self.capacity) {
+        0...15 => Pango.Color.Red,
+        16...30 => Pango.Color.Orange,
+        95...100 => Pango.Color.Green,
+        else => null,
+    };
+}
+
 pub fn format(self: Battery, comptime fmt: []const u8, _: std.fmt.FormatOptions, out: anytype) !void {
     if (std.mem.eql(u8, fmt, "pango")) {
-        const color: ?Pango.Color = if (self.capacity < 20) Pango.Color.Red else null;
-        const p = Pango.Pango(Battery).init(self, color);
+        const p = Pango.Pango(Battery).init(self, self.color());
         return out.print("{}", .{p});
     }
 

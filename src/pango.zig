@@ -6,15 +6,31 @@ const bPrint = std.fmt.bufPrint;
 
 pub const Color = struct {
     red: u8 = 0x00,
-    blue: u8 = 0x00,
     green: u8 = 0x00,
+    blue: u8 = 0x00,
     alpha: ?u8 = null,
     buffer: [9]u8 = [_]u8{'#'} ++ [_]u8{'0'} ** 8,
     len: usize = 7,
 
     pub const Red = Color{
         .red = 0xff,
-        .buffer = [_]u8{'#'} ++ [_]u8{'f'} ** 2 ++ [_]u8{'0'} ** 6,
+        .buffer = "#ff000000".*,
+    };
+
+    pub const Green = Color{
+        .green = 0xff,
+        .buffer = "#00ff0000".*,
+    };
+
+    pub const Blue = Color{
+        .blue = 0xff,
+        .buffer = "#0000ff00".*,
+    };
+
+    pub const Orange = Color{
+        .red = 0xff,
+        .green = 0xff,
+        .buffer = "#ffa50000"[0..].*,
     };
 
     pub fn red(self: *Color, r: u8) !void {
