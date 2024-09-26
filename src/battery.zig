@@ -6,15 +6,14 @@ const DELAY = 10;
 
 const Battery = @This();
 
-update: i64 = 0,
-capacity: u8 = 0,
+updated: i64 = 0,
+current: usize = 0,
 powered: bool = false,
 name: []const u8 = "battery",
 
 pub fn init() !Battery {
     var bat = Battery{};
-    try bat.readBat();
-    try bat.readPowerd();
+    try bat.update(1);
     return bat;
 }
 
@@ -23,7 +22,7 @@ fn readBat(self: *Battery) !void {
     defer file.close();
     var buffer: [10]u8 = undefined;
     const count = try file.read(&buffer);
-    self.capacity = try std.fmt.parseInt(u8, buffer[0 .. count - 1], 10);
+    self.current = try std.fmt.parseInt(usize, buffer[0 .. count - 1], 10);
 }
 
 fn readPowerd(self: *Battery) !void {
@@ -41,9 +40,9 @@ fn readPowerd(self: *Battery) !void {
 }
 
 pub fn update(self: *Battery, i: i64) !void {
-    if (self.update > i) return;
+    if (self.updated > i) return;
 
-    self.update = i + DELAY;
+    self.updated = i + DELAY;
     try self.readBat();
     try self.readPowerd();
 }
@@ -53,23 +52,24 @@ pub fn ttl(self: Battery) ![]u8 {
         var buf: [12]u8 = undefined;
     };
 
-    const power: usize = @as(usize, @intCast(self.capacity)) / 100;
-
-    const time: usize = 240 *| power;
+    const time: usize = (240 *| self.current) / 100;
     return try std.fmt.bufPrint(&ttlbuf.buf, "{}h{}m", .{ time / 60, time % 60 });
 }
 
-pub fn gfx(self: Battery, buffer: *[30]u8) []u8 {
-    var fill: usize = self.capacity;
+pub fn gfx(self: Battery) []u8 {
+    const gfxl = struct {
+        var b: [30]u8 = undefined;
+    };
+    var fill: usize = self.current;
     var index: usize = 0;
-    for (buffer) |*b| b.* = ' ';
+    for (gfxl.b[0..]) |*b| b.* = ' ';
     //count -|= 1;
     while (fill >= 10) : (fill -|= 10) {
-        buffer[index..][0..3].* = "⣿".*;
+        gfxl.b[index..][0..3].* = "⣿".*;
         index += 3;
     }
-    if (index == 30) return buffer;
-    buffer[index..][0..3].* = switch (@as(u4, @truncate(fill % 10))) {
+    if (index == 30) return gfxl.b[0..];
+    gfxl.b[index..][0..3].* = switch (@as(u4, @truncate(fill % 10))) {
         0 => "   ".*,
         1 => "⡀".*,
         2 => "⡄".*,
@@ -80,20 +80,19 @@ pub fn gfx(self: Battery, buffer: *[30]u8) []u8 {
         8...9 => "⣷".*,
         10...15 => unreachable,
     };
-    return buffer;
+    return gfxl.b[0..];
 }
 
 test gfx {
-    var buffer: [30]u8 = undefined;
-    const zero = Battery{ .capacity = 0 };
-    const five = Battery{ .capacity = 5 };
+    const zero = Battery{ .current = 0 };
+    const five = Battery{ .current = 5 };
 
-    zero.gfx(&buffer);
-    five.gfx(&buffer);
+    _ = zero.gfx();
+    _ = five.gfx();
 }
 
 fn color(self: Battery) ?Pango.Color {
-    return switch (self.capacity) {
+    return switch (self.current) {
         0...15 => Pango.Color.Red,
         16...30 => Pango.Color.Orange,
         95...100 => Pango.Color.Green,
@@ -108,7 +107,7 @@ pub fn format(self: Battery, comptime fmt: []const u8, _: std.fmt.FormatOptions,
     }
 
     if (self.powered) {
-        if (self.capacity > 98) {
+        if (self.current > 97) {
             try out.print("Charged ", .{});
         } else {
             try out.print("Charging ", .{});
@@ -117,9 +116,8 @@ pub fn format(self: Battery, comptime fmt: []const u8, _: std.fmt.FormatOptions,
         try out.print("Battery ", .{});
     }
 
-    if (self.capacity == 69) return out.print("NICE!", .{});
+    if (self.current == 69) return out.print("NICE!", .{});
     const time: []u8 = try self.ttl();
-    var buffer: [30]u8 = [_]u8{' '} ** 30;
-    _ = self.gfx(&buffer);
-    return out.print("{}% [{s}] {s}", .{ self.capacity, buffer, time });
+    const bar: []u8 = self.gfx();
+    return out.print("{}% [{s}] {s}", .{ self.current, bar, time });
 }

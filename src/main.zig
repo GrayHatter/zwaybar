@@ -99,8 +99,8 @@ fn bl(click: ?Click) !Body {
 
 var bat_buffer: [1024]u8 = undefined;
 fn battery(_: ?Click) !Body {
-    const bat = try Battery.init();
-    //try bat.update(std.time.timestamp());
+    var bat = try Battery.init();
+    try bat.update(std.time.timestamp());
     return Body{
         .full_text = try printFull(&bat_buffer, bat),
         .markup = "pango",
