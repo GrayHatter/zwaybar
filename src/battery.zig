@@ -117,7 +117,7 @@ pub fn format(self: Battery, comptime fmt: []const u8, _: std.fmt.FormatOptions,
         try out.print("Battery", .{});
     }
 
-    if (self.current == 69) return out.print("NICE!", .{});
+    if (self.current == 69) return out.print(" NICE!", .{});
     const time: []u8 = try self.ttl();
     const bar: []u8 = self.gfx();
     return out.print(" {}% [{s}] {s}", .{ self.current, bar, time });
