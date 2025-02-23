@@ -115,7 +115,7 @@ fn ipAddr(_: ?Click) !Body {
         .full_text = try printFull(&ipa_buffer, null),
         .markup = "pango",
         .name = "ipaddr",
-        .instance = "ipaddr_0",
+        .instance = "ipaddrt_0",
     };
 }
 
@@ -191,8 +191,8 @@ pub fn main() !void {
     try bw.flush(); // don't forget to flush!
 
     const builders = [_]BldFn{
-        bl,
         battery,
+        bl,
         date,
     };
     //var list: [builders.len + 1]Body = undefined;
