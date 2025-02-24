@@ -97,16 +97,22 @@ fn bl(click: ?Click) !Body {
     }
 }
 
+var bat_handle: ?Battery = null;
 var bat_buffer: [1024]u8 = undefined;
-fn battery(_: ?Click) !Body {
-    var bat = try Battery.init();
-    try bat.update(std.time.timestamp());
-    return Body{
-        .full_text = try printFull(&bat_buffer, bat),
-        .markup = "pango",
-        .name = "battery",
-        .instance = "battery_0",
-    };
+fn battery(clk: ?Click) !Body {
+    if (bat_handle) |*bat| {
+        if (clk) |c| bat.click(c.button);
+        try bat.update(std.time.timestamp());
+        return Body{
+            .full_text = try printFull(&bat_buffer, bat),
+            .markup = "pango",
+            .name = "battery",
+            .instance = "battery_0",
+        };
+    } else {
+        bat_handle = try Battery.init();
+        return battery(clk);
+    }
 }
 
 var ipa_buffer: [1024]u8 = undefined;

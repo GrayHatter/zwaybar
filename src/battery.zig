@@ -9,6 +9,7 @@ const Battery = @This();
 updated: i64 = 0,
 current: usize = 0,
 powered: bool = false,
+wide: bool = true,
 name: []const u8 = "battery",
 
 pub fn init() !Battery {
@@ -37,6 +38,10 @@ fn readPowerd(self: *Battery) !void {
         '1' => self.powered = true,
         else => @panic("unexpected value from ACAD"),
     }
+}
+
+pub fn click(bat: *Battery, _: u8) void {
+    bat.wide = !bat.wide;
 }
 
 pub fn update(self: *Battery, i: i64) !void {
@@ -106,15 +111,17 @@ pub fn format(self: Battery, comptime fmt: []const u8, _: std.fmt.FormatOptions,
         return out.print("{}", .{p});
     }
 
-    if (self.powered) {
-        if (self.current > 97) {
-            try out.print("Charged", .{});
-            return;
+    if (self.wide) {
+        if (self.powered) {
+            if (self.current > 97) {
+                try out.print("Charged", .{});
+                return;
+            } else {
+                try out.print("Charging", .{});
+            }
         } else {
-            try out.print("Charging", .{});
+            try out.print("Battery", .{});
         }
-    } else {
-        try out.print("Battery", .{});
     }
 
     if (self.current == 69) return out.print(" NICE!", .{});
