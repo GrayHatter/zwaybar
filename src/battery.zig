@@ -40,8 +40,8 @@ fn readPowerd(self: *Battery) !void {
     }
 }
 
-pub fn click(bat: *Battery, _: u8) void {
-    bat.wide = !bat.wide;
+pub fn click(bat: *Battery, m: u8) void {
+    if (m == 1) bat.wide = !bat.wide;
 }
 
 pub fn update(self: *Battery, i: i64) !void {
