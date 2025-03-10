@@ -53,7 +53,7 @@ fn dateOffset(os: i16) DateTime {
     return DateTime.nowOffset(@as(isize, os) * 60 * 60);
 }
 
-const CONFIG_OFFSET: i16 = -8;
+const CONFIG_OFFSET: i16 = -7;
 
 fn localOffset() DateTime {
     // TODO read from config or system, lol!
