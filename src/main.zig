@@ -70,7 +70,7 @@ fn date(_: ?Click) anyerror!Body {
 }
 
 fn printFull(buf: []u8, handle: anytype) ![]const u8 {
-    return try std.fmt.bufPrint(buf, "{pango}", .{handle});
+    return try std.fmt.bufPrint(buf, "{f}", .{handle});
 }
 
 var bl_handle: ?Video.Backlight = null;
@@ -183,18 +183,18 @@ pub fn main() !void {
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
     var a = fba.allocator();
 
-    const stdin = std.io.getStdIn();
+    const stdin = std.fs.File.stdin();
     _ = stdin;
 
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
+    const stdout_file = std.fs.File.stdout();
+    var w_b: [4000]u8 = undefined;
+    var stdout = stdout_file.writer(&w_b);
 
     const header = Header{};
-    const opt = .{ .emit_null_optional_fields = false };
-    try std.json.stringify(header, opt, stdout);
-    _ = try bw.write("\n[");
-    try bw.flush(); // don't forget to flush!
+    const opt: std.json.Stringify.Options = .{ .emit_null_optional_fields = false };
+    try stdout.interface.print("{f}", .{std.json.fmt(header, opt)});
+    try stdout.interface.writeAll("\n[");
+    try stdout.interface.flush(); // don't forget to flush!
 
     const builders = [_]BldFn{
         battery,
@@ -268,8 +268,8 @@ pub fn main() !void {
             list[builders.len] = Body{ .full_text = str, .name = "debug", .instance = "debug" };
         }
 
-        try std.json.stringify(list, opt, stdout);
-        _ = try bw.write(",\n");
-        try bw.flush(); // don't forget to flush!
+        try stdout.interface.print("{f}", .{std.json.fmt(list, opt)});
+        try stdout.interface.writeAll(",\n");
+        try stdout.interface.flush(); // don't forget to flush!
     }
 }

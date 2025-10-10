@@ -3,12 +3,16 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const exe = b.addExecutable(.{
-        .name = "zwaybar",
+    const rootmod = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
-    });
+        });
+
+
+    const exe = b.addExecutable(.{
+        .name = "zwaybar",
+        .root_module = rootmod,    });
     b.installArtifact(exe);
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
@@ -20,9 +24,7 @@ pub fn build(b: *std.Build) void {
     run_step.dependOn(&run_cmd.step);
 
     const unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = rootmod,
     });
 
     const run_unit_tests = b.addRunArtifact(unit_tests);

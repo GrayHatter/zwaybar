@@ -39,7 +39,7 @@ pub const Backlight = struct {
     var bl_buffer: [1024]u8 = undefined;
     pub fn json(self: Backlight) !Body {
         return Body{
-            .full_text = try std.fmt.bufPrint(&bl_buffer, "{}", .{self}),
+            .full_text = try std.fmt.bufPrint(&bl_buffer, "{f}", .{self}),
             .name = "backlight",
             .instance = "backlight_0",
         };
@@ -65,7 +65,7 @@ pub const Backlight = struct {
         } else return;
     }
 
-    pub fn format(self: Backlight, comptime _: []const u8, _: std.fmt.FormatOptions, out: anytype) !void {
+    pub fn format(self: Backlight, out: *std.Io.Writer) !void {
         const pct = self.current * 100 / self.max;
         return out.print("Light {}%", .{pct});
     }

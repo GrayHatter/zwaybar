@@ -5,50 +5,50 @@ const bPrint = std.fmt.bufPrint;
 //const Pango = @This();
 
 pub const Color = struct {
-    red: u8 = 0x00,
-    green: u8 = 0x00,
-    blue: u8 = 0x00,
-    alpha: ?u8 = null,
+    r: u8 = 0x00,
+    g: u8 = 0x00,
+    b: u8 = 0x00,
+    a: ?u8 = null,
     buffer: [9]u8 = [_]u8{'#'} ++ [_]u8{'0'} ** 8,
     len: usize = 7,
 
     pub const Red = Color{
-        .red = 0xff,
+        .r = 0xff,
         .buffer = "#ff000000".*,
     };
 
     pub const Green = Color{
-        .green = 0xff,
+        .g = 0xff,
         .buffer = "#00ff0000".*,
     };
 
     pub const Blue = Color{
-        .blue = 0xff,
+        .b = 0xff,
         .buffer = "#0000ff00".*,
     };
 
     pub const Orange = Color{
-        .red = 0xff,
-        .green = 0xff,
+        .r = 0xff,
+        .g = 0xff,
         .buffer = "#ffa50000"[0..].*,
     };
 
     pub fn red(self: *Color, r: u8) !void {
-        self.red = r;
-        try bPrint(self.buffer[1..3], "{}", hexL(self.red));
+        self.r = r;
+        try bPrint(self.buffer[1..3], "{}", hexL(self.r));
     }
 
     pub fn green(self: *Color, g: u8) !void {
-        self.green = g;
-        try bPrint(self.buffer[3..5], "{}", hexL(self.green));
+        self.g = g;
+        try bPrint(self.buffer[3..5], "{}", hexL(self.g));
     }
 
     pub fn blue(self: *Color, b: u8) !void {
-        self.blue = b;
-        try bPrint(self.buffer[5..7], "{}", hexL(self.blue));
+        self.b = b;
+        try bPrint(self.buffer[5..7], "{}", hexL(self.b));
     }
 
-    pub fn format(self: Color, comptime _: []const u8, _: std.fmt.FormatOptions, out: anytype) !void {
+    pub fn format(self: Color, out: *std.Io.Writer) !void {
         _ = try out.write(self.buffer[0..self.len]);
     }
 };
@@ -67,9 +67,9 @@ pub fn Pango(comptime other: type) type {
             };
         }
 
-        pub fn format(self: Self, comptime _: []const u8, _: std.fmt.FormatOptions, out: anytype) !void {
-            if (self.color == null) return try out.print("{}", .{self.other});
-            return try out.print("<span color=\"{}\">{text}</span>", .{ self.color.?, self.other });
+        pub fn format(self: Self, out: *std.Io.Writer) !void {
+            if (self.color == null) return try out.print("{f}", .{self.other});
+            return try out.print("<span color=\"{f}\">{f}</span>", .{ self.color.?, self.other });
         }
     };
 }

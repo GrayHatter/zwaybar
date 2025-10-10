@@ -105,12 +105,12 @@ fn color(self: Battery) ?Pango.Color {
     };
 }
 
-pub fn format(self: Battery, comptime fmt: []const u8, _: std.fmt.FormatOptions, out: anytype) !void {
-    if (std.mem.eql(u8, fmt, "pango")) {
-        const p = Pango.Pango(Battery).init(self, self.color());
-        return out.print("{}", .{p});
-    }
+pub fn format(self: Battery, out: *std.Io.Writer) !void {
+    const p = Pango.Pango(Battery).init(self, self.color());
+    return out.print("{f}", .{p});
+}
 
+pub fn alt(self: Battery, out: *std.Io.Writer) !void {
     if (self.wide) {
         if (self.powered) {
             if (self.current > 97) {
