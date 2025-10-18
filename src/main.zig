@@ -61,12 +61,12 @@ fn localOffset() DateTime {
 }
 
 var date_buffer: [1024]u8 = undefined;
-fn date(_: ?Click) anyerror!Body {
-    return Body{
+fn date(_: ?Click, w: *Writer) !void {
+    try w.print("{f}",.{ json.fmt(Body{
         .full_text = try printFull(&date_buffer, localOffset()),
         .name = "datetime",
         .instance = "datetime_0",
-    };
+    }, jsonopt)});
 }
 
 fn printFull(buf: []u8, handle: anytype) ![]const u8 {
@@ -75,43 +75,44 @@ fn printFull(buf: []u8, handle: anytype) ![]const u8 {
 
 var bl_handle: ?Video.Backlight = null;
 var bl_buffer: [1024]u8 = undefined;
-fn bl(click: ?Click) !Body {
+fn bl(click: ?Click, w: *Writer) !void {
     if (bl_handle) |*handle| {
         if (click) |clk| {
             var dir: ?Mouse.Button = null;
             try handle.click(clk);
             if (clk.button == 4 or clk.button == 5) {
                 dir = if (clk.button == 4) .up else .down;
-                return Body{
+                try w.print("{f}", .{json.fmt(Body{
                     .full_text = try printFull(&bl_buffer, handle),
                     .name = "backlight",
                     .instance = "backlight_0",
-                };
+                }, jsonopt)});
+                return;
             }
         }
         try handle.update(std.time.timestamp());
-        return handle.json();
+        try w.print("{f}", .{json.fmt(try handle.json(), jsonopt)});
     } else {
         bl_handle = try Video.Backlight.init();
-        return bl(click);
+        try bl(click, w);
     }
 }
 
 var bat_handle: ?Battery = null;
 var bat_buffer: [1024]u8 = undefined;
-fn battery(clk: ?Click) !Body {
+fn battery(clk: ?Click, w: *Writer) !void {
     if (bat_handle) |*bat| {
         if (clk) |c| bat.click(c.button);
         try bat.update(std.time.timestamp());
-        return Body{
+        try w.print("{f}",.{json.fmt(Body{
             .full_text = try printFull(&bat_buffer, bat),
             .markup = "pango",
             .name = "battery",
             .instance = "battery_0",
-        };
+        }, jsonopt)});
     } else {
         bat_handle = try Battery.init();
-        return battery(clk);
+        return battery(clk, w);
     }
 }
 
@@ -142,8 +143,8 @@ const Builder = struct {
     click: ClkFn,
 };
 
-const BldFn = *const fn (?Click) anyerror!Body;
-const ClkFn = *const fn (?Click) anyerror!Body;
+const BldFn = *const fn (?Click, *Writer) anyerror!void;
+const ClkFn = *const fn (?Click, *Writer) anyerror!void;
 
 fn toClick(a: Allocator, str: []const u8) !Click {
     var parsed = std.json.parseFromSlice(Click, a, str, .{}) catch |err| switch (err) {
@@ -178,10 +179,13 @@ test toClick {
     );
 }
 
+    const jsonopt: std.json.Stringify.Options = .{ .emit_null_optional_fields = false };
+
+
 var buffer: [0xffffff]u8 = undefined;
 pub fn main() !void {
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    var a = fba.allocator();
+    const a = fba.allocator();
 
     const stdin = std.fs.File.stdin();
     _ = stdin;
@@ -191,18 +195,15 @@ pub fn main() !void {
     var stdout = stdout_file.writer(&w_b);
 
     const header = Header{};
-    const opt: std.json.Stringify.Options = .{ .emit_null_optional_fields = false };
-    try stdout.interface.print("{f}", .{std.json.fmt(header, opt)});
+    try stdout.interface.print("{f}", .{std.json.fmt(header, jsonopt)});
     try stdout.interface.writeAll("\n[");
     try stdout.interface.flush(); // don't forget to flush!
 
     const builders = [_]BldFn{
-        battery,
+        //battery,
         bl,
         date,
     };
-    //var list: [builders.len + 1]Body = undefined;
-    var list: []Body = try a.alloc(Body, builders.len + 1);
 
     const err_mask = std.posix.POLL.ERR | std.posix.POLL.NVAL | std.posix.POLL.HUP;
     var buf: [0x5000]u8 = undefined;
@@ -215,7 +216,6 @@ pub fn main() !void {
 
     while (true) {
         var miss: usize = 1;
-        list.len = builders.len;
 
         for (0..100) |_| {
             if (std.posix.poll(&poll_fd, 10) catch unreachable > 0) {
@@ -242,12 +242,11 @@ pub fn main() !void {
                     const ending = try std.fmt.bufPrint(buf[amt..], " && {}", .{err});
                     str = &buf;
                     str.len = amt + ending.len;
-                    list.len = builders.len + 1;
                     break :brk null;
                 },
             };
         } else if (poll_fd[0].revents & err_mask != 0) {
-            unreachable;
+            @panic("not implemented error");
         } else {
             std.debug.print("--debug-- nothing\n", .{});
         }
@@ -255,21 +254,22 @@ pub fn main() !void {
         if (parsed) |prs| {
             click = prs.value;
         }
+        
+        const w = &stdout.interface;
 
-        for (list[0..builders.len], builders) |*l, func| {
-            l.* = func(click) catch |err| backup: {
+        try w.writeAll("[");
+        for (builders, 0..) |func, i| {
+        if (i != 0) try w.writeAll(",");
+            func(click, w) catch |err| {
                 std.debug.print("Error {} when attempting to try {}\n", .{ err, func });
-                break :backup build_error;
+                try w.print("{f}", .{json.fmt(build_error, jsonopt)});
             };
         }
+        try w.writeAll("],\n");
 
-        if (list.len > builders.len) {
-            // json error maybe? print debugging
-            list[builders.len] = Body{ .full_text = str, .name = "debug", .instance = "debug" };
-        }
-
-        try stdout.interface.print("{f}", .{std.json.fmt(list, opt)});
-        try stdout.interface.writeAll(",\n");
         try stdout.interface.flush(); // don't forget to flush!
     }
 }
+
+const Writer = std.Io.Writer;
+const json = std.json;
