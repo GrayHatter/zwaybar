@@ -53,14 +53,14 @@ pub const Color = struct {
     }
 };
 
-pub fn Pango(comptime other: type) type {
+pub fn Pango(Other: type) type {
     return struct {
         color: ?Color,
-        other: other,
+        other: Other,
 
         const Self = @This();
 
-        pub fn init(thing: other, color: ?Color) Self {
+        pub fn init(thing: Other, color: ?Color) Self {
             return Self{
                 .color = color,
                 .other = thing,
@@ -68,8 +68,9 @@ pub fn Pango(comptime other: type) type {
         }
 
         pub fn format(self: Self, out: *std.Io.Writer) !void {
-            if (self.color == null) return try out.print("{f}", .{self.other});
-            return try out.print("<span color=\"{f}\">{f}</span>", .{ self.color.?, self.other });
+            const other = if (comptime @hasDecl(Other, "alt")) std.fmt.alt(self.other, .alt) else self.other;
+            if (self.color == null) return try out.print("{f}", .{other});
+            return try out.print("<span color=\"{f}\">{f}</span>", .{ self.color.?, other });
         }
     };
 }

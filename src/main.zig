@@ -200,7 +200,7 @@ pub fn main() !void {
     try stdout.interface.flush(); // don't forget to flush!
 
     const builders = [_]BldFn{
-        //battery,
+        battery,
         bl,
         date,
     };

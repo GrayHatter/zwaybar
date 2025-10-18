@@ -110,7 +110,7 @@ pub fn format(self: Battery, out: *std.Io.Writer) !void {
     return out.print("{f}", .{p});
 }
 
-pub fn alt(self: Battery, out: *std.Io.Writer) !void {
+pub fn alt(self: Battery, out: *std.Io.Writer) error{WriteFailed}!void {
     if (self.wide) {
         if (self.powered) {
             if (self.current > 97) {
@@ -125,7 +125,7 @@ pub fn alt(self: Battery, out: *std.Io.Writer) !void {
     }
 
     if (self.current == 69) return out.print(" NICE!", .{});
-    const time: []u8 = try self.ttl();
+    const time: []u8 = self.ttl() catch return error.WriteFailed;
     const bar: []u8 = self.gfx();
     return out.print(" {}% [{s}] {s}", .{ self.current, bar, time });
 }
